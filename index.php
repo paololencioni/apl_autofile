@@ -9,7 +9,6 @@ error_reporting(E_ERROR | E_WARNING | E_PARSE);
 // identify the file to the system but rather the parent folder has the the id number
 $folder_id_str="/\(ID-\d+\)/i";
 preg_match("/\(ID-\d+\)/i", "cswirl(Id-976)", $output_array);
-echo($output_array[0]);
 
 // populate this array with the path to folders on the network where you want to get files from
 // this will usually be areas where devices such as xray machines are dumping files
@@ -25,6 +24,12 @@ $target_directories = array(
 'C:/Users/paolo.ATLANTICPACIFIC/Documents/2014',
 'C:/Users/paolo.ATLANTICPACIFIC/Documents/BAS',
 'C:/Users/paolo.ATLANTICPACIFIC/Documents/bookkeeping');
+
+// set mode to 'copy' if file copy is required else the file will be moved. Copy is Useful for testing and data migrations
+$mode="xcopy";
+
+// for added security, if allow use of a 'trash' directory if "" then no thash
+$trash_dir="C:/Users/paolo.ATLANTICPACIFIC/Documents/autofile_trashcan";
 
 // *******************************************************************************************
 
@@ -55,11 +60,19 @@ function scan_dir($directory)
     return $directory_tree;
     }//end function
 
-function tidy_filename($filename)
+function tidy_foldername($filename)
     {
     $filename=trim(strtoupper($filename),")(");
     return $filename;
     }//end function
+
+function get_file_name_only($file_path)
+    {
+    $path_parts = pathinfo($file_path);
+    return $path_parts['basename'];
+    }
+
+echo "Mode= $mode. If mode is not 'copy' the source files will be deleted<br>\n";
 
 echo "Scanning for device folders:<br>\n";
 foreach($target_directories as $target_dir) {
@@ -103,11 +116,33 @@ foreach($file_names as $file_path)
              //if (stristr($file_path,$folder_id_str))
              if (   preg_match("/\(ID-\d+\)/i", $file_path, $output_array) )
                  {
-                 echo "This file will be moved as a folder because the path contains ". $output_array[0].". The folder will be called: ".tidy_filename($output_array[0])."<br>\n";
-                 mkdir ( $devices_arr[$devicelist]."/".tidy_filename($output_array[0]) );
+                 echo "This file ".get_file_name_only($file_path)." will be moved with a folder because the path contains ". $output_array[0].". The folder will be called: ".tidy_foldername($output_array[0])."<br>\n";
+                 if (     !is_dir($devices_arr[$devicelist]."/".tidy_foldername($output_array[0]))  )
+                    mkdir ( $devices_arr[$devicelist]."/".tidy_foldername($output_array[0]) );
                  }
                  else
                     echo "This file will be moved as a file only - note the file name should contain an ID number<br>\n";
+
+             if (!copy($file_path, $devices_arr[$devicelist]."/".tidy_foldername($output_array[0])."/".get_file_name_only($file_path)))
+                    echo "failed to copy $file...<br>\n";
+                       else
+                          {
+                          echo "Copy successfull<br>\n";
+                          if($mode!="copy")
+                              {
+                              echo "Will now delete the source file<br>\n";
+                              if($trash_dir!='')
+                                  {
+                                  if(!is_dir($trash_dir))
+                                      mkdir($trash_dir);
+                                  copy($file_path,$trash_dir."/".get_file_name_only($file_path));
+                                  }
+                              if(  !unlink($file_path)  )
+                                  echo "failed to delete the file<br>\n";
+                              }
+                          }
+
+
              }
              else
                 echo "No target directory found<br>\n";
