@@ -8,7 +8,6 @@ error_reporting(E_ERROR | E_WARNING | E_PARSE);
 // set the folder identifier. This reg exp will ber used to identify folder logic in cases where the file name itself does not
 // identify the file to the system but rather the parent folder has the the id number
 $folder_id_str="/\(ID-\d+\)/i";
-preg_match("/\(ID-\d+\)/i", "cswirl(Id-976)", $output_array);
 
 // populate this array with the path to folders on the network where you want to get files from
 // this will usually be areas where devices such as xray machines are dumping files
